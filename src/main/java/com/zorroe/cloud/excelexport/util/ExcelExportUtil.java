@@ -1,7 +1,7 @@
 package com.zorroe.cloud.excelexport.util;
 
-import com.alibaba.excel.EasyExcel;
-import com.alibaba.excel.write.builder.ExcelWriterBuilder;
+import org.apache.fesod.sheet.FesodSheet;
+import org.apache.fesod.sheet.write.builder.ExcelWriterBuilder;
 
 import javax.servlet.http.HttpServletResponse;
 import java.net.URLEncoder;
@@ -31,7 +31,7 @@ public class ExcelExportUtil {
             response.setHeader("Content-Disposition", "attachment;filename*=utf-8''" + encodedFileName);
 
             // 构建Excel写入器
-            ExcelWriterBuilder writerBuilder = EasyExcel.write(response.getOutputStream(), dataClass);
+            ExcelWriterBuilder writerBuilder = FesodSheet.write(response.getOutputStream(), dataClass);
             // 自定义配置（如样式、列宽等）
             if (customize != null) {
                 customize.customize(writerBuilder);
