@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class AccountExportVo implements ExportVo {
+public class BalanceExportVo implements ExportVo{
 
     @ExcelProperty(value = "账户")
     private String accountNo;
@@ -32,13 +32,17 @@ public class AccountExportVo implements ExportVo {
     private BigDecimal balance;
 
     @ColumnWidth(20)
+    @ExcelProperty(value = "可用余额")
+    @NumberFormat(value = "#.##", roundingMode = RoundingMode.HALF_UP)
+    private BigDecimal availableBalance;
+
+    @ColumnWidth(20)
     @ExcelProperty(value = "余额刷新时间")
     @DateTimeFormat(value = DatePattern.NORM_DATETIME_PATTERN)
     private LocalDateTime balanceTime;
 
+    @ColumnWidth(20)
     @ExcelProperty(value = "银行类型", converter = BankTypeConverter.class)
     private String bankType;
 
-    @ExcelProperty(value = "备注")
-    private String remark;
 }
