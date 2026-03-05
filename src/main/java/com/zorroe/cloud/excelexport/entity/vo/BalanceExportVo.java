@@ -9,6 +9,9 @@ import org.apache.fesod.sheet.annotation.ExcelProperty;
 import org.apache.fesod.sheet.annotation.format.DateTimeFormat;
 import org.apache.fesod.sheet.annotation.format.NumberFormat;
 import org.apache.fesod.sheet.annotation.write.style.ColumnWidth;
+import org.apache.fesod.sheet.annotation.write.style.ContentStyle;
+import org.apache.fesod.sheet.enums.BooleanEnum;
+import org.apache.poi.ss.usermodel.BuiltinFormats;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -28,12 +31,12 @@ public class BalanceExportVo implements ExportVo{
 
     @ColumnWidth(20)
     @ExcelProperty(value = "账户余额")
-    @NumberFormat(value = "#.##", roundingMode = RoundingMode.HALF_UP)
+    @ContentStyle(dataFormat = 2)
     private BigDecimal balance;
 
     @ColumnWidth(20)
     @ExcelProperty(value = "可用余额")
-    @NumberFormat(value = "#.##", roundingMode = RoundingMode.HALF_UP)
+    @ContentStyle(dataFormat = 2)
     private BigDecimal availableBalance;
 
     @ColumnWidth(20)
