@@ -134,11 +134,13 @@ excelExport/
 
 ### 1. 策略模式
 
+#### 导出策略接口
+
 `ExcelExportStrategy` 接口定义了导出的标准流程：
 
 ```java
 public interface ExcelExportStrategy<Q extends ExportParam, T extends ExportVo> {
-    // 获取导出类型标识（如 ACCOUNT、ACCOUNT_BALANCE）
+    // 获取导出类型标识（如 ACCOUNT、BALANCE）
     String getExportType();
     
     // 获取查询条件的 Class 类型（用于参数转换）
@@ -158,7 +160,29 @@ public interface ExcelExportStrategy<Q extends ExportParam, T extends ExportVo> 
 }
 ```
 
+#### 导入策略接口
+
+`ExcelImportStrategy` 接口定义了导入的标准流程：
+
+```java
+public interface ExcelImportStrategy<T extends ExcelDTO> {
+    // 获取支持的模板类型编码
+    String getSupportTemplateType();
+    
+    // 获取数据实体的 Class 类型
+    Class<T> getDataClass();
+    
+    // 获取 Excel 监听器（负责数据读取和校验）
+    AbstractExcelListener<T> getListener();
+    
+    // 保存数据到数据库
+    boolean saveData(List<? extends ExcelDTO> dataList);
+}
+```
+
 ### 2. 工厂模式
+
+#### 导出工厂
 
 `ExcelExportFactory` 负责管理所有导出策略：
 
@@ -166,16 +190,41 @@ public interface ExcelExportStrategy<Q extends ExportParam, T extends ExportVo> 
 - 通过 `getStrategy(exportType)` 方法获取对应策略
 - 找不到策略时抛出 `IllegalArgumentException`
 
+#### 导入工厂
+
+`ExcelImportFactory` 负责管理所有导入策略：
+
+- 自动注入所有 `ExcelImportStrategy` 实现类
+- 统一处理导入流程：文件读取 → 数据校验 → 数据保存
+- 提供模板下载功能
+
 ### 3. 工作流程
+
+#### 导出流程
 
 ```
 HTTP 请求 → Controller → Factory 获取策略 → Strategy 准备数据 
 → Util 生成 Excel → HttpServletResponse 返回文件
 ```
 
+#### 导入流程
+
+```
+HTTP 请求上传文件 → Controller → Factory 获取策略 
+→ Listener 读取并校验数据 → 校验失败返回错误 
+→ 校验成功 → Strategy 保存数据 → 返回结果
+```
+
+#### 模板下载流程
+
+```
+HTTP 请求 → Factory 获取策略 → 生成仅包含表头的 Excel 
+→ HttpServletResponse 返回文件
+```
+
 ## API 接口
 
-### 导出 Excel
+### 1. 导出 Excel
 
 **请求地址**：`POST /excel/export`
 
@@ -189,6 +238,7 @@ HTTP 请求 → Controller → Factory 获取策略 → Strategy 准备数据
 **请求示例**：
 
 ```bash
+# 导出账户数据
 curl -X POST "http://localhost:8080/excel/export?exportType=ACCOUNT" \
   -H "Content-Type: application/json" \
   -d '{
@@ -196,11 +246,110 @@ curl -X POST "http://localhost:8080/excel/export?exportType=ACCOUNT" \
     "startDate": "2024-01-01",
     "endDate": "2024-12-31"
   }'
+
+# 导出余额数据
+curl -X POST "http://localhost:8080/excel/export?exportType=BALANCE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountNo": "6213001987"
+  }'
 ```
 
 **响应**：Excel 文件下载（二进制流）
 
 **文件名格式**：`{导出类型}_{yyyyMMddHHmmss}.xlsx`
+
+**支持的导出类型**：
+- `ACCOUNT` - 账户导出
+- `BALANCE` - 余额导出
+
+---
+
+### 2. 导入 Excel
+
+**请求地址**：`POST /excel/import`
+
+**请求参数**：
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| templateType | String | 是 | 模板类型编码（如 product、customer） |
+| file | MultipartFile | 是 | 上传的 Excel 文件 |
+
+**请求示例**：
+
+```bash
+# 导入商品数据
+curl -X POST "http://localhost:8080/excel/import" \
+  -F "templateType=product" \
+  -F "file=@/path/to/product.xlsx"
+
+# 导入客户数据
+curl -X POST "http://localhost:8080/excel/import" \
+  -F "templateType=customer" \
+  -F "file=@/path/to/customer.xlsx"
+```
+
+**响应示例**：
+
+成功：
+```json
+{
+  "code": 200,
+  "message": "导入成功，共导入：50 条数据",
+  "data": "导入成功，共导入：50 条数据"
+}
+```
+
+失败：
+```json
+{
+  "code": 500,
+  "message": "数据校验失败，错误行数：3，详情：[...错误详情...]",
+  "data": null
+}
+```
+
+**导入流程**：
+1. 文件上传与格式校验
+2. 读取 Excel 数据
+3. 数据验证（基于注解校验 + 自定义校验）
+4. 校验失败返回错误信息
+5. 校验成功调用保存逻辑
+
+**支持的导入类型**：
+- `product` - 商品导入
+- `customer` - 客户导入
+
+---
+
+### 3. 下载模板
+
+**请求地址**：`GET /excel/template`
+
+**请求参数**：
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| templateType | String | 是 | 模板类型编码 |
+
+**请求示例**：
+
+```bash
+# 下载商品导入模板
+curl -O -J "http://localhost:8080/excel/template?templateType=product"
+
+# 下载客户导入模板
+curl -O -J "http://localhost:8080/excel/template?templateType=customer"
+```
+
+**响应**：Excel 模板文件下载（仅包含表头）
+
+**文件名格式**：`{模板描述}.xlsx`
+
+**支持的模板类型**：
+- `product` - 商品导入模板
+- `customer` - 客户导入模板
 
 ## 配置说明
 
