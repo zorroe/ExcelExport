@@ -3,6 +3,7 @@ package com.zorroe.cloud.excelexport.strategy;
 import com.zorroe.cloud.excelexport.entity.dto.ExcelDTO;
 import com.zorroe.cloud.excelexport.listener.AbstractExcelListener;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface ExcelImportStrategy<T extends ExcelDTO> {
@@ -23,7 +24,15 @@ public interface ExcelImportStrategy<T extends ExcelDTO> {
     boolean saveData(List<? extends ExcelDTO> dataList);
 
     /**
-     * 获取数据类型Class
+     * 获取数据类型 Class
      */
     Class<T> getDataClass();
+
+    /**
+     * 生成空模板数据（用于下载）
+     * @return 空数据列表，仅包含表头
+     */
+    default Collection<T> generateTemplateData() {
+        return new java.util.ArrayList<>();
+    }
 }

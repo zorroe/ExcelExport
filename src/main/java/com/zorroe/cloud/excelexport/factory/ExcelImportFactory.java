@@ -9,10 +9,16 @@ import com.zorroe.cloud.excelexport.entity.param.ImportParam;
 import com.zorroe.cloud.excelexport.entity.validator.ValidateError;
 import com.zorroe.cloud.excelexport.listener.AbstractExcelListener;
 import com.zorroe.cloud.excelexport.strategy.ExcelImportStrategy;
+import org.apache.fesod.sheet.ExcelWriter;
 import org.apache.fesod.sheet.FesodSheet;
+import org.apache.fesod.sheet.write.metadata.WriteSheet;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,4 +74,36 @@ public class ExcelImportFactory {
         return Result.success("导入成功, 共导入: " + dataList.size() + "条数据");
     }
 
+    public void downloadTemplate(String templateType, HttpServletResponse response) {
+        ExcelTemplateType excelTemplateType = ExcelTemplateType.getByCode(templateType);
+        if (excelTemplateType == null) {
+            throw new IllegalArgumentException("不支持的模板类型：" + templateType);
+        }
+        ExcelImportStrategy<? extends ExcelDTO> strategy = strategyMap.get(excelTemplateType.getCode());
+        if (strategy == null) {
+            throw new IllegalArgumentException("未找到导入类型[" + templateType + "]对应的策略");
+        }
+        
+        // 生成文件名
+        String fileName = excelTemplateType.getDesc() + ".xlsx";
+        
+        // 设置响应头
+        try {
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.setHeader("Content-Disposition", 
+                    "attachment;filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()).replaceAll("\\+", "%20"));
+        } catch (Exception e) {
+            throw new RuntimeException("设置响应头失败", e);
+        }
+        
+        // 使用 EasyExcel 直接写入内存，不保存文件到服务器
+        try (ExcelWriter excelWriter = FesodSheet.write(response.getOutputStream(), strategy.getDataClass()).build()) {
+            WriteSheet writeSheet = FesodSheet.writerSheet("模板").build();
+            // 写入空数据（只有表头）
+            excelWriter.write(strategy.generateTemplateData(), writeSheet);
+        } catch (IOException e) {
+            throw new RuntimeException("生成模板失败：" + e.getMessage(), e);
+        }
+    }
 }
