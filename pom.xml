@@ -74,7 +74,6 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.zorroe.cloud.excelexport.ExcelExportApplication</mainClass>
-                    <skip>true</skip>
                 </configuration>
                 <executions>
                     <execution>
