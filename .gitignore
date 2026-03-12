@@ -30,3 +30,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Logs ###
+*.log
+logs/
+
+### Local Config ###
+*.local
+application-local.properties
